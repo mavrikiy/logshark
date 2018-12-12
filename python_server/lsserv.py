@@ -5,6 +5,7 @@ Created on Dec 3, 2018
 '''
 #!/usr/bin/python3
 import errno
+import paramiko
 from http.server import BaseHTTPRequestHandler,HTTPServer
 from urllib.parse import urlparse, urlencode, quote_plus, parse_qs
 from socketserver import ThreadingMixIn
@@ -13,7 +14,7 @@ import os.path
 from datetime import datetime
 import json
 from base64 import b64encode, b64decode
-
+import re
 
 #from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 from os import curdir, sep
@@ -185,10 +186,119 @@ class myHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps(reply).encode())
+            elif action=="get_log4cxx_logers":
+                host_name = "10.40.22.155"
+                user_name = "ccap"
+                user_password = "ccap"
+                host_port = 2022
+                log4cxx_port = 0
+
+                if "host_name" in qs:
+                    host_name = qs['host_name'][-1]
+
+                if "user_name" in qs:
+                    user_name = qs['user_name'][-1]
+                    
+                if "user_password" in qs:
+                    user_password = qs['user_password'][-1]
+
+                if "host_port" in qs:
+                    host_port = qs['host_port'][-1]
+
+                if "log4cxx_port" in qs:
+                    log4cxx_port = qs['log4cxx_port'][-1]
+
+                command="nsg-logctl "
+                
+                reply = {}
+                if not log4cxx_port == 0 :
+                    command += "-h 127.0.0.1:"+str(log4cxx_port)
+                command += " ShowCategory \".*\" "
+                try:
+                    client = paramiko.SSHClient()
+                    client.load_system_host_keys()
+                    client.set_missing_host_key_policy(paramiko.WarningPolicy)
+    
+                    client.connect(host_name, port=host_port, username=user_name, password=user_password)
+
+                    stdin, stdout, stderr = client.exec_command(command)
+                    res = stdout.read()
+
+                    res = res.decode().split("\n")
+                    loggers = []
+                    for i in res:
+                        #fixme make some smarter check
+                        if not "NAME" in i:
+                        
+                            i = re.sub(' +',' ',i)
+                            regex = r".* ((\bTRACE\b)|(\bINFO\b)|(\bDEBUG\b)|(\bERROR\b)|(\bWARN\b)|(\bFATAL\b)|(\bOFF\b)|(\bALL\b)) .*"
+                            matches = re.finditer(regex, i, re.MULTILINE)
+                            
+                            for matchNum, match in enumerate(matches):
+                                delim = match.group(1)
+                                loggers.append( [i.split(delim)[0], delim] )
+                finally:
+                    client.close()
+
+                reply["loggers"] = loggers
+                self.send_response(200)
+                self.send_header('Content-type', "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(reply).encode())
+            elif action=="set_log4cxx_logers":
+                host_name = "10.40.22.155"
+                user_name = "ccap"
+                user_password = "ccap"
+                host_port = 2022
+                log4cxx_port = 0
+                severity_level = "debug"
+                logger = ""
+
+                if "host_name" in qs:
+                    host_name = qs['host_name'][-1]
+
+                if "user_name" in qs:
+                    user_name = qs['user_name'][-1]
+                    
+                if "user_password" in qs:
+                    user_password = qs['user_password'][-1]
+
+                if "host_port" in qs:
+                    host_port = qs['host_port'][-1]
+
+                if "log4cxx_port" in qs:
+                    log4cxx_port = qs['log4cxx_port'][-1]
+                
+                if "severity_level" in qs:
+                    severity_level = qs['severity_level'][-1]
+                
+                if "logger" in qs:
+                    logger = qs['logger'][-1]
+
+
+                command="nsg-logctl "
+                if not log4cxx_port == 0 :
+                    command += "-h 127.0.0.1:"+str(log4cxx_port)
+                command += " SetCategoryPriority " + str(logger) + "\".*\" " + severity_level
+                try:
+                    client = paramiko.SSHClient()
+                    client.load_system_host_keys()
+                    client.set_missing_host_key_policy(paramiko.WarningPolicy)
+                    client.connect(host_name, port=host_port, username=user_name, password=user_password)
+                    stdin, stdout, stderr = client.exec_command(command)
+                    res = stdout.read()
+                    res = res.decode()
+
+                finally:
+                    client.close()
+                self.send_response(200)
+                self.send_header('Content-type', "text/plain")
+                self.end_headers()
+                self.wfile.write(str("OK").encode())
 
         except (IndexError, KeyError) as e:
             self.send_response(500)
-            self.send_header('Content-type', "text/3plain")
+            self.send_header('Content-type', "text/plain")
             self.end_headers()
             self.wfile.write("500 - internal error".encode())
         
