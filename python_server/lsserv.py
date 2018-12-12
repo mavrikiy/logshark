@@ -4,6 +4,7 @@ Created on Dec 3, 2018
 @author: dpavlyuk
 '''
 #!/usr/bin/python3
+import errno
 from http.server import BaseHTTPRequestHandler,HTTPServer
 from urllib.parse import urlparse, urlencode, quote_plus, parse_qs
 from socketserver import ThreadingMixIn
@@ -143,6 +144,14 @@ class myHandler(BaseHTTPRequestHandler):
             elif action=="log":
                 content_len = int(self.headers.get('content-length', 0))
                 content=self.rfile.read(content_len)
+                storage_dir=os.path.realpath(os.path.join(curdir, "storage/"+str(os.path.dirname(filename)) ))
+                try:
+                    os.makedirs(storage_dir)
+                except OSError as exc:  # Python >2.5
+                    if exc.errno == errno.EEXIST and os.path.isdir(storage_dir):
+                        pass
+                    else:
+                        raise
                 print(content_len)
                 with mutex:
                     with open(filepath, "ab") as f:
