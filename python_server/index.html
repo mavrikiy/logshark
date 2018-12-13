@@ -44,6 +44,14 @@
    </script>
 
 	<style>
+	
+	#shark_bg {
+		position: absolute;
+		right: 50px;
+		bottom: 50px;
+		opacity: 0.5;
+		z-index: 0;
+	}}
 
 	#logs {
 	  
@@ -86,6 +94,14 @@
 	  witdh: 100%; 
 	
 	}
+	
+	#timeline .menu {
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 10px;
+            z-index: 9999;
+        }
 	
 	.tl-tooltip {
 	   white-space: pre-wrap;
@@ -218,12 +234,18 @@
 	.dlg-file-list{
 
 		overflow: auto;
-		max-height: 200px;
+		height: 200px;
 		
 	}
 	
 	.dlg-file-list li{
 		margin: 0px;
+		
+		height: 44px;
+	}
+	
+	.dlg-file-list li .mdl-list__item-primary-content {
+		margin-top: 10px;
 	}
 	
 	.dlg-file-list li:hover{
@@ -272,7 +294,10 @@
 </header>
 
 <div class="mdl-layout__drawer">
-    <span class="mdl-layout-title">Logshark</span>
+    <span class="mdl-layout-title">
+    <img src="icon.png" style="width: 32px; height: 32px; padding-bottom: 5px;">
+    Logshark
+    </span>
     
     <ul class="demo-list-control mdl-list">
 	
@@ -302,13 +327,12 @@
   
    <li class="mdl-list__item" id="upload_info" style="display: none;">
     <span class="mdl-list__item-primary-content">
-       <i class="material-icons ">cloud_upload</i>&nbsp;
-      Uploading <span id="upload_size"></span>
-    </span>
+      <i class="material-icons ">cloud_upload</i>&nbsp;
+      <span id="upload_size"></span>
+    </span><br><br>
 	
     <span class="mdl-list__item-secondary-action">
-		<div class="mdl-spinner mdl-js-spinner is-active"></div>
-
+		<div class="mdl-spinner mdl-js-spinner is-active" style="width: 24px; height: 24px;"></div>
     </span>
 
   </li>
@@ -462,7 +486,30 @@
     
     <section class="mdl-layout__tab-panel" id="tab-timeline">
       <div class="page-content">
-		  <div id="timeline"></div>
+		  <div id="timeline">
+		  <div class="menu">
+			<button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" onclick="timeline.zoomIn(0.2);">
+			  <i class="material-icons">zoom_in</i>
+			</button>
+			<button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" onclick="timeline.zoomOut(0.2);">
+			  <i class="material-icons">zoom_out</i>
+			</button>
+			
+			<button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" onclick="MoveTimeline(0.2);">
+			  <i class="material-icons">arrow_back</i>
+			</button>
+			
+			<button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" onclick="MoveTimeline(-0.2);">
+			  <i class="material-icons">arrow_forward</i>
+			</button>
+			
+			<button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" onclick="timeline.fit();">
+			  <i class="material-icons">gps_fixed</i>
+			</button>
+
+			
+    		</div>
+		  </div>
       </div>
     </section>
     
@@ -541,8 +588,8 @@
 			  <div class="mdl-cell mdl-cell--4-col">
 			  <button onclick="AddRule(GetDefaultRule());" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-js-ripple-effect">
 			      <i class="material-icons">add</i>
-				  Add
-			</button>
+				  Create
+			</button>&nbsp;
 			
 			<button onclick="EditRule();" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
 			      <i class="material-icons">edit</i>
@@ -554,22 +601,22 @@
 			      <i class="material-icons">delete</i>
 				  
 			</button>
-			
+			<br><br>
 			<button onclick="EnableRules();" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
 			      <i class="material-icons">check_circle_outline</i>
-				  
-			</button>
+				  Enable
+			</button>&nbsp;
 			
 			<button onclick="DisableRules();" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
 			      <i class="material-icons">highlight_off</i>
-				  
+				  Disable
 			</button>
 			
 			<br><br>
 			
 			<button onclick="ImportRules();" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
 			      <i class="material-icons">get_app</i> Import
-			</button>
+			</button>&nbsp;
 			
 			<button onclick="SaveRules();" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
 			      <i class="material-icons">save</i> Export
@@ -658,6 +705,11 @@ tail -qF /var/log/*.log | ./logdump.py <span class="id-source-file"></span></pre
 
 </div>
 
+<div id="root_snackbar" class="mdl-js-snackbar mdl-snackbar">
+  <div class="mdl-snackbar__text"></div>
+  <button class="mdl-snackbar__action" type="button"></button>
+</div>
+<img src="shark_bg.png" id="shark_bg">
 </body>
 
 </html>

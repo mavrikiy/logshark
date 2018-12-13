@@ -62,6 +62,9 @@ class myHandler(BaseHTTPRequestHandler):
             if self.path.endswith(".gif"):
                 mimetype='image/gif'
                 sendReply = True
+            if self.path.endswith(".png"):
+                mimetype='image/png'
+                sendReply = True
             if self.path.endswith(".js"):
                 mimetype='application/javascript'
                 sendReply = True
