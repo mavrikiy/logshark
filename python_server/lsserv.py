@@ -15,7 +15,8 @@ from datetime import datetime
 import json
 from base64 import b64encode, b64decode
 import re
-
+import subprocess
+import time
 #from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 from os import curdir, sep
 import cgi
@@ -201,6 +202,11 @@ class myHandler(BaseHTTPRequestHandler):
                 host_port = 2022
                 log4cxx_port = 0
 
+                command=""
+                
+                if "core" in qs:
+                    command="sudo -S nsenter -t 1 -n -- "
+
                 if "host_name" in qs:
                     host_name = qs['host_name'][-1]
 
@@ -216,12 +222,13 @@ class myHandler(BaseHTTPRequestHandler):
                 if "log4cxx_port" in qs:
                     log4cxx_port = qs['log4cxx_port'][-1]
 
-                command="nsg-logctl "
-                
+                command += "nsg-logctl "
+
                 reply = {}
                 if not log4cxx_port == 0 :
                     command += "-h 127.0.0.1:"+str(log4cxx_port)
-                command += " ShowCategory \".*\" "
+                command += " ShowCategory \'.*\' " 
+
                 try:
                     client = paramiko.SSHClient()
                     client.load_system_host_keys()
@@ -229,13 +236,19 @@ class myHandler(BaseHTTPRequestHandler):
     
                     client.connect(host_name, port=host_port, username=user_name, password=user_password)
 
-                    stdin, stdout, stderr = client.exec_command(command)
-                    res = stdout.read()
+                    print(command)
+                    stdin, stdout, stderr = client.exec_command(command, get_pty = True)
 
+                    if not stdout.channel.closed:
+                        stdin.write("ccap\n")
+                    stdin.flush()
+                    
+                    res = stdout.read()
                     res = res.decode().split("\n")
                     loggers = []
+
                     for i in res:
-                        #fixme make some smarter check
+                      #fixme make some smarter check
                         if not "NAME" in i:
                         
                             i = re.sub(' +',' ',i)
@@ -283,8 +296,13 @@ class myHandler(BaseHTTPRequestHandler):
                 if "logger" in qs:
                     logger = qs['logger'][-1]
 
+                command=""
+                
+                if "core" in qs:
+                    command="sudo -S nsenter -t 1 -n -- "
 
-                command="nsg-logctl "
+                command += "nsg-logctl "
+
                 if not log4cxx_port == 0 :
                     command += "-h 127.0.0.1:"+str(log4cxx_port)
                 command += " SetCategoryPriority " + str(logger) + "\".*\" " + severity_level
@@ -293,9 +311,16 @@ class myHandler(BaseHTTPRequestHandler):
                     client.load_system_host_keys()
                     client.set_missing_host_key_policy(paramiko.WarningPolicy)
                     client.connect(host_name, port=host_port, username=user_name, password=user_password)
-                    stdin, stdout, stderr = client.exec_command(command)
+                    print(command)
+                    stdin, stdout, stderr = client.exec_command(command, get_pty = True)
+
+                    if not stdout.channel.closed:
+                        stdin.write("ccap\n")
+                    stdin.flush()
+                    
                     res = stdout.read()
-                    res = res.decode()
+                    res = res.decode().split("\n")
+                    loggers = []
 
                 finally:
                     client.close()
