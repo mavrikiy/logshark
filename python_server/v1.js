@@ -1029,7 +1029,7 @@ function updateGraph() {
         interpolation: false
     };
     //draw_items.length = 0;
-    console.log(graph_items_offset);
+    //console.log(graph_items_offset);
     if (document.getElementById("option-rate").checked) {
         updateRateGraph();
         //graph_options.style = 'bar';
@@ -1057,12 +1057,19 @@ function updateRateGraph() {
     console.log("updateRateGr");
     var interval = document.getElementById('graph-rate-interval').value;
     var interval_start = graph_items[0].start;
-    var interval_end = interval_start.add(interval, 's');
+    var interval_end = interval_start.clone();
+    interval_end.add(interval, 's');
     var count = 0;
-    for (var i = graph_items_offset; i < graph_items.length; ++i) {
+    for (var i = graph_items_offset; i < graph_items.length; ) {
     //for (var i = 0; i < graph_items.length; ++i) {
+        //console.log(interval);
+        //console.log(interval_start);
+        //console.log(interval_end);
+        //console.log(graph_items[i].start);
+        //console.log("**********************");
         if (graph_items[i].start < interval_end) {
             ++count;
+            ++i;
         } else {
             var date_time = interval_end.format('MM/DD/YYYY HH:mm:ss');
             draw_items.push({
@@ -1070,8 +1077,8 @@ function updateRateGraph() {
                 y: count
             });
             count = 1;
-            interval_start = graph_items[i].start;
-            interval_end = interval_start.add(interval, 's');
+            interval_start.add(interval, 's');
+            interval_end.add(interval, 's');
             graph_items_offset = i;
         }
     }
