@@ -2,6 +2,7 @@
 
 function ShowLoadFileDialog(cb) {
 	var file_input=document.getElementById("file_upload").test;
+	$("upload_info").show(); // workaround
 	file_input.onchange=function(){};
 	file_input.value="";
 	file_input.onchange=function(){

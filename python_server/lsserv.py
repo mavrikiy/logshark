@@ -155,9 +155,17 @@ class myHandler(BaseHTTPRequestHandler):
                     else:
                         raise
                 print(content_len)
+
+                
+
                 with mutex:
+                    filedir=os.path.dirname(filepath)
+                    if not os.path.exists(filedir):
+                        print("Create directory: "+filedir)
+                        os.makedirs(filedir)
                     with open(filepath, "ab") as f:
                         f.write(content)
+                        
                 self.send_response(200)
                 self.send_header('Content-type', "text/plain")
                 self.end_headers()
@@ -168,10 +176,10 @@ class myHandler(BaseHTTPRequestHandler):
                 for name in files:
                     full_path = filepath + "/" + name
                     params = {}
-                    params['create'] = str(os.path.getctime(full_path))
-                    params['change'] = str(os.path.getmtime(full_path))
+                    params['create'] = os.path.getctime(full_path)
+                    params['change'] = os.path.getmtime(full_path)
                     params['name'] = name
-                    params['size'] = str(os.path.getsize(full_path))
+                    params['size'] = os.path.getsize(full_path)
                     if os.path.isdir(full_path):
                         dir_list.append(params)
                     else:

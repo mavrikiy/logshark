@@ -17,6 +17,7 @@
 	<script src="st.js"></script>
 	<script src="v1.js"></script>
 	<script src="file_upload.js"></script>
+	<script src="file_open.js"></script>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	
 	
@@ -24,6 +25,22 @@
     <div style="">
        <span>{{{content}}}</span>
     </div>
+   </script>
+   
+   <script id="filelist-ul-template" type="text/x-handlebars-template">
+       <li class="mdl-list__item mdl-list__item--three-line" onclick="{{onclick}}">
+	    <span class="mdl-list__item-primary-content">
+	      <i class="material-icons mdl-list__item-icon">{{icon}}</i>
+	      <span>{{name}}</span>
+	      <span class="mdl-list__item-text-body">
+
+           {{size}} Changed {{modified}}
+	      </span>
+	    </span>
+	    <span class="mdl-list__item-secondary-content">
+	      
+	    </span>
+	  </li>
    </script>
 
 	<style>
@@ -198,6 +215,21 @@
 		right: -30px;
 	}
 	
+	.dlg-file-list{
+
+		overflow: auto;
+		max-height: 200px;
+		
+	}
+	
+	.dlg-file-list li{
+		margin: 0px;
+	}
+	
+	.dlg-file-list li:hover{
+		background-color: #ccc;
+	}
+	
 	
 	
 	
@@ -326,7 +358,7 @@
   <li class="mdl-list__item">
     <span class="mdl-list__item-primary-content">
       <i class="material-icons ">view_list</i>&nbsp;
-      <span id="lines">0</span>&nbsp;records
+      <span id="lines">0</span>&nbsp;logs parsed
     </span>
     <span class="mdl-list__item-secondary-action">
 
@@ -434,6 +466,55 @@
       </div>
     </section>
     
+    <section class="mdl-layout__tab-panel" id="tab-graph">
+      <div class="page-content">
+		  <div id="graph-settings" style="padding: 10px;">
+              <div id="graph-type" style="padding: 10px;">
+                  <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="option-rate">
+                      <input type="radio" id="option-rate" class="mdl-radio__button" name="options" onclick="onClickRateRadio(this)" value="1" checked>
+                      <span class="mdl-radio__label">Rate</span>
+                  </label>
+                  <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="option-count">
+                      <input type="radio" id="option-count" class="mdl-radio__button" name="options"  onclick="onClickCountRadio(this)" value="2">
+                      <span class="mdl-radio__label">Count</span>
+                  </label>
+                  <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="option-value">
+                      <input type="radio" id="option-value" class="mdl-radio__button" name="options"  onclick="onClickValueRadio(this)" value="3">
+                      <span class="mdl-radio__label">Value</span>
+                  </label>
+              </div>
+              <div id="graph-filter">
+                  <form action="#">
+                    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                      <input class="mdl-textfield__input" type="text" id="graph-filter-name">
+                      <label class="mdl-textfield__label" for="graph-filter-name">Filter name</label>
+                    </div>
+                  </form>
+              </div>
+              <div id="graph-rate-settings">
+                  <form action="#">
+                    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                      <input class="mdl-textfield__input" type="text" pattern="-?[0-9]*(\.[0-9]+)?" id="graph-rate-interval">
+                      <label class="mdl-textfield__label" for="graph-rate-interval">Interval (sec)</label>
+                      <span class="mdl-textfield__error">Input is not a number!</span>
+                    </div>
+                  </form>
+              </div>
+              <div id="graph-count-settings" style="display:none">
+              </div>
+              <div id="graph-value-settings" style="display:none">
+                  <form action="#">
+                    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                      <input class="mdl-textfield__input" type="text" id="graph-value-pattern">
+                      <label class="mdl-textfield__label" for="graph-value-pattern">Value pattern</label>
+                    </div>
+                  </form>
+              </div>
+          </div>
+		  <div id="graph-drawing" style="padding: 10px;">
+          </div>
+      </div>
+    </section>
     
      <section class="mdl-layout__tab-panel" id="tab-rules">
       <div class="page-content">
@@ -484,12 +565,15 @@
 				  
 			</button>
 			
+			<br><br>
 			
+			<button onclick="ImportRules();" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
+			      <i class="material-icons">get_app</i> Import
+			</button>
 			
-			<!--button onclick="SaveRules();" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
-			      <i class="material-icons">save_alt</i>
-				  
-			</button-->
+			<button onclick="SaveRules();" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
+			      <i class="material-icons">save</i> Export
+			</button>
 			  </div>
 			</div>
       </div>
@@ -505,13 +589,18 @@ tail -qF /var/log/*.log | ./logdump.py <span class="id-source-file"></span></pre
     
 </main>
 
-  <dialog id="filename-dialog" class="mdl-dialog">
+  <dialog id="filename-dialog" class="mdl-dialog" style="width: 400px;">
     <h4 class="mdl-dialog__title">Open file</h4>
     <div class="mdl-dialog__content">
-      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+      <div class="mdl-textfield mdl-js-textfield">
         <input class="mdl-textfield__input id-filename" type="text">
-        <label class="mdl-textfield__label" for="sample3">Filename</label>
+        <label class="mdl-textfield__label" for="sample3"></label>
       </div>
+      
+      <ul class="dlg-file-list mdl-list">
+	  
+	</ul>
+
     </div>
     <div class="mdl-dialog__actions">
       <button type="button" class="mdl-button select">Select</button>
@@ -562,9 +651,8 @@ tail -qF /var/log/*.log | ./logdump.py <span class="id-source-file"></span></pre
   </dialog>
 
 
-<form id="file_upload">
-<input id=test type=file name=test style="visibility:hidden;position:absolute;top:0;left:0" onchange="document.getElementById('info').innerHTML=this.value">
-<input type=button value="get file" onclick="this.form.test.click()">
+<form id="file_upload" style="position: absolute; z-index: -999; visibility:hidden;">
+<input id=test type=file name=test style="visibility:hidden;position:absolute;top:0;left:0">
 <span id="info" style="border:1px solid black">    </span>
 </form>
 

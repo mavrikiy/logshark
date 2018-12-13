@@ -121,7 +121,11 @@ function GetLinePattern(time, priority, line) {
     var items = new vis.DataSet({
         type: { start: 'ISODate', end: 'ISODate' }
     });
-    
+
+    var graph_items = [];
+
+    var draw_items = []; 
+
     var view = new vis.DataView(items, {
       filter: function (item) {
          return true;
@@ -173,6 +177,7 @@ function GetLinePattern(time, priority, line) {
    };
    
    var timeline;
+   var graph;
    
    
    var target_file = "";
@@ -315,7 +320,15 @@ function GetLinePattern(time, priority, line) {
                }
                if (item.group != "hide") {
                   items.add([item]);
-               }
+                  var graphFilter = document.getElementById('graph-filter-name');
+
+                  //console.log("entry.name == " + entry.name);
+                  //console.log("graphFilter.value = " + graphFilter.value);
+                  if (entry.name == graphFilter.value) {
+                      console.log("filter matches");
+                      graph_items.push(item);
+                  }  
+             }
                
                return true;
                break;
@@ -350,6 +363,7 @@ function GetLinePattern(time, priority, line) {
         //$("#patterns").html("");
         pattern_table={};
         items.clear();
+        graph_items.length = 0;
         prev_entry = null;
         prev_level = "";
         prev_add = false;
@@ -590,17 +604,25 @@ function GetLinePattern(time, priority, line) {
     }
     
     function SaveRules() {
-        
-         $.ajax({
-          type: "POST",
-          data: JSON.stringify(GenerateFilterTable({state:"OFF"})),
-          url: "api?action=save_rules",
-          success: function(result) {
-              
-          },
-        });
+    	
+    	SaveToFile(JSON.stringify(GenerateFilterTable({state:"OFF"})), "filters.json", "application/json");
         
         //componentHandler.upgradeDom()
+    }
+    
+    function ImportRules() {
+    	ShowLoadFileDialog(function(result){
+
+    		var rules = JSON.parse(result);
+            
+            for (var i in rules) {
+               var rule = rules[i];
+               AddRule(rule);
+            }
+
+            search_table=GenerateFilterTable({state:"OFF"});
+    	});
+    	
     }
     
     
@@ -792,7 +814,8 @@ function GetLinePattern(time, priority, line) {
                     //});
                 }
                  
-                 
+                
+                updateGraph(); 
              
                  
 
@@ -851,7 +874,22 @@ function GetLinePattern(time, priority, line) {
        $.ajax({
           url: "api?action=get&file="+target_file+"&offset="+offset+"&length="+request_size,
           context: document.body,
-          success: HandleData
+          success: HandleData,
+          statusCode: {
+        	    404: function() {
+        	        alert('Not found!');
+        	    	$.ajax({
+        	            type: "POST",
+        	            data:"",
+        	            url: "api?action=log&file="+target_file,
+        	            success: function(result){
+        	                alert("New file created: " + target_file);
+        	                Loader();
+        	            }
+        	    	});
+        	    	
+        	    },
+        	  }
        }).done(function() {
           //$( this ).addClass( "done" );
           //Loader();
@@ -867,6 +905,7 @@ function GetLinePattern(time, priority, line) {
 
         var filename_dialog = document.querySelector('#filename-dialog');
         $("#filename-dialog input.id-filename").val(c_filename ? c_filename : "");
+        RequestFileList(".");
         filename_dialog.showModal();
     }
     
@@ -905,9 +944,6 @@ function GetLinePattern(time, priority, line) {
         timeline = new vis.Timeline(container, view, groups, options);
         timeline.setOptions({ orientation: {axis: "both", item: "top"} });
         
-        
-        
-        
         var filename_dialog = document.querySelector('#filename-dialog');
         var showDialogButton = document.querySelector('#show-filename-dialog');
         if (! filename_dialog.showModal) {
@@ -920,8 +956,7 @@ function GetLinePattern(time, priority, line) {
         
         filename_dialog.querySelector('.select').addEventListener('click', function() {
           var new_filename = $("#filename-dialog input.id-filename").val();
-          SetFilename(new_filename);
-          filename_dialog.close();
+          ChooseFilename(new_filename);
         });
         
         filename_dialog.querySelector('.close').addEventListener('click', function() {
@@ -967,5 +1002,93 @@ function GetLinePattern(time, priority, line) {
         });
 
     });
+
+//$("label[for=option-rate]").click(function(){
+//        console.log("RATE onClick");
+//        $("#graph-rate-settings").show();
+//        $("#graph-count-settings").hide();
+//        $("#graph-value-settings").hide();
+//        });
+
+function onClickRateRadio(radio) {
+        $("#graph-rate-settings").show();
+        $("#graph-count-settings").hide();
+        $("#graph-value-settings").hide();
+}
     
-    
+function onClickCountRadio(radio) {
+        $("#graph-rate-settings").hide();
+        $("#graph-count-settings").show();
+        $("#graph-value-settings").hide();
+}
+
+function onClickValueRadio(radio) {
+        $("#graph-rate-settings").hide();
+        $("#graph-count-settings").hide();
+        $("#graph-value-settings").show();
+}
+
+function updateGraph() {
+    console.log("updateGraph");
+    if (! graph_items[0]) {
+        console.log("no graph items");
+        return;
+    }
+    //draw_items.length = 0;
+    if (document.getElementById("option-rate").checked) {
+        updateRateGraph();
+    } else if (document.getElementById("option-count").checked) {
+        updateCountGraph();
+    } else if (document.getElementById("option-value").checked) {
+        updateValueGraph();
+    }
+    var graph_dataset = new vis.DataSet(draw_items);
+    var graph_options = {
+        start: graph_items[0].start.format('MM/DD/YYYY HH:mm:ss'),
+        end: graph_items[graph_items.length - 1].start.format('MM/DD/YYYY HH:mm:ss')
+    };
+    var graph_container = document.getElementById('graph-drawing');
+    graph_container.innerHTML = ""
+
+    var graph2d = new vis.Graph2d(graph_container, graph_dataset, graph_options);
+}
+
+
+function updateRateGraph() {
+    console.log("updateRateGr");
+    for (item in graph_items) {
+        console.log(item)
+    }
+    draw_items = [
+        {x: '2018-12-11', y: 10},
+        {x: '2018-12-12', y: 25},
+        {x: '2018-12-13', y: 30},
+        {x: '2018-12-14', y: 10},
+        {x: '2018-12-15', y: 15},
+        {x: '2018-12-16', y: 30}
+    ];
+}
+
+function updateCountGraph() {
+    console.log("updateCountGr");
+    for (i in graph_items) {
+        //console.log(graph_items[i].start)
+        //console.log(typeof(graph_items[i].start))
+        draw_items.push({
+            x: graph_items[i].start.format('MM/DD/YYYY HH:mm:ss'),
+            y: i
+        })
+    }
+}
+
+function updateValueGraph() {
+    console.log("updateValueGr");
+    draw_items = [
+        {x: '2018-12-11', y: 10},
+        {x: '2018-12-12', y: 25},
+        {x: '2018-12-13', y: 30},
+        {x: '2018-12-14', y: 10},
+        {x: '2018-12-15', y: 15},
+        {x: '2018-12-16', y: 30}
+    ];
+}
