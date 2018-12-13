@@ -178,6 +178,31 @@ function GetLinePattern(time, priority, line) {
    var target_file = "";
    var search_table=[];
    
+   var host_name = "10.40.22.155";
+   var user_name = "ccap";
+   var user_password = "ccap";
+   var host_port = "2022";
+   var log4cxx_port = "23501"
+
+   function SetHost(host) {
+        console.log(host.id);
+       switch(host.id) {
+        case 'hvs-202':  // if (x === 'value1')
+            host_name = "10.40.22.155";
+            user_name = "ccap";
+            user_password = "ccap";
+            host_port = "2022";
+            log4cxx_port = "23501"
+            console.log("hvs-202 selected");
+
+            break;
+        default:
+            console.log("unsupported setup");
+        break;
+        }
+ 
+    }
+
    var data_size = {
        processed: 0,
        process_speed: 0,
